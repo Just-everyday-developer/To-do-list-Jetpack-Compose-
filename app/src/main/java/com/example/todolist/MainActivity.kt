@@ -1,6 +1,5 @@
 package com.example.todolist
 
-import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,6 +73,29 @@ import androidx.compose.ui.unit.sp
 import com.example.todolist.ui.theme.TodoListTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import android.content.Context
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+
+fun saveTasks(context: Context, tasks: List<Task>) {
+    val sharedPreferences = context.getSharedPreferences("tasks_prefs", Context.MODE_PRIVATE)
+    val editor = sharedPreferences.edit()
+    val json = Gson().toJson(tasks)
+    editor.putString("tasks", json)
+    editor.apply()
+}
+
+fun loadTasks(context: Context): List<Task> {
+    val sharedPreferences = context.getSharedPreferences("tasks_prefs", Context.MODE_PRIVATE)
+    val json = sharedPreferences.getString("tasks", null)
+    return if (json != null) {
+        val type = object : TypeToken<List<Task>>() {}.type
+        Gson().fromJson(json, type)
+    } else {
+        emptyList()
+    }
+}
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -82,7 +104,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             TodoListTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Board(Modifier.padding(innerPadding).fillMaxSize())
+                    Board(Modifier.padding(innerPadding).fillMaxSize(), this@MainActivity)
                 }
             }
         }
@@ -93,10 +115,11 @@ data class Task(
     val id: Int,
     val text: String
 )
+
 @Composable
-fun Board(modifier: Modifier) {
-    var tasks by remember { mutableStateOf(listOf<Task>()) }
-    var nextId by remember { mutableStateOf(0) }
+fun Board(modifier: Modifier, context: Context) {
+    var tasks by remember { mutableStateOf(loadTasks(context)) }
+    var nextId by remember { mutableStateOf(tasks.maxOfOrNull { it.id + 1 } ?: 0) }
     var inputText by remember { mutableStateOf("") }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -107,6 +130,7 @@ fun Board(modifier: Modifier) {
             modifier = Modifier.matchParentSize()
         )
     }
+
     Column(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -121,6 +145,7 @@ fun Board(modifier: Modifier) {
                     tasks = tasks + Task(nextId, inputText)
                     nextId++
                     inputText = ""
+                    saveTasks(context, tasks)
                 }
             }
         )
@@ -128,10 +153,12 @@ fun Board(modifier: Modifier) {
             tasks = tasks,
             onDeleteTask = { taskId ->
                 tasks = tasks.filterNot { it.id == taskId }
+                saveTasks(context, tasks)
             }
         )
     }
 }
+
 
 @Composable
 fun Title(padding: Dp) {
