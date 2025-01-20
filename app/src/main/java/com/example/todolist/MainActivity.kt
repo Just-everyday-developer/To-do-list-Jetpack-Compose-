@@ -143,6 +143,7 @@ fun Board(modifier: Modifier, context: Context) {
             onAddTask = {
                 if (inputText.isNotBlank()) {
                     tasks = tasks + Task(nextId, inputText)
+                    tasks = tasks.sortedBy { it.text }
                     nextId++
                     inputText = ""
                     saveTasks(context, tasks)
@@ -191,7 +192,7 @@ fun Input_Text_Field(
         shape = RoundedCornerShape(CornerSize(25.dp)),
         singleLine = true,
         onValueChange = onTextChange,
-        label = { Text("Enter a task") },
+        label = { Text("Enter a task", style = TextStyle(color = Color.White, fontSize = 20.sp)) },
         textStyle = TextStyle(
             fontSize = 20.sp,
             fontWeight = FontWeight.W500,
